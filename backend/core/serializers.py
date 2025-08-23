@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import User, Post, Product
+from .models import User, Post, Product,Payment
 
 class UserRegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
@@ -33,4 +33,11 @@ class PostSerializer(serializers.ModelSerializer):
 class ProductSerializer(serializers.ModelSerializer):
     class Meta:
         model = Product
+        fields = '__all__'
+
+        
+
+class PaymentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Payment
         fields = '__all__'

@@ -65,4 +65,71 @@ class ProductViewSet(viewsets.ModelViewSet):
     queryset = Product.objects.all()
     serializer_class = ProductSerializer
     authentication_classes = [JWTAuthentication]
-    permission_classes = [IsAdminUser]  # Only admins can manage products
+
+    def get_permissions(self):
+        if self.action in ['create', 'update', 'partial_update', 'destroy']:
+            return [IsAdminUser()]  # Only admins can create/update/delete
+        return [permissions.AllowAny()]  # Anyone can read products
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# views.py
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
+import stripe
+from django.conf import settings
+from .models import Payment
+from .serializers import PaymentSerializer
+from datetime import datetime
+
+stripe.api_key = settings.STRIPE_SECRET_KEY
+
+class CreatePaymentIntentView(APIView):
+    def post(self, request):
+        try:
+            price = request.data.get('price')
+            amount = int(float(price) * 100)  # Stripe expects cents
+            intent = stripe.PaymentIntent.create(
+                amount=amount,
+                currency='usd',
+                payment_method_types=['card'],
+            )
+            return Response({'clientSecret': intent.client_secret})
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class SavePaymentView(APIView):
+    def post(self, request):
+        data = request.data
+        serializer = PaymentSerializer(data=data)
+        if serializer.is_valid():
+            serializer.save(date=datetime.now())
+            return Response({'paymentResult': serializer.data}, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class PaymentListView(APIView):
+    def get(self, request, email):
+        payments = Payment.objects.filter(email=email)
+        serializer = PaymentSerializer(payments, many=True)
+        return Response(serializer.data)
